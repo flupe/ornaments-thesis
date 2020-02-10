@@ -1,10 +1,9 @@
-
 -- Derive a HasDesc instance from a QuotedDesc
 
 module Cx.HasDesc.Derive where
 
-open import Common
-open import Reflection
+open import Common hiding (abs)
+open import Reflect
 
 open import Cx.Named
 open import Cx.HasDesc.Core
@@ -104,19 +103,17 @@ private
   hasDescType (mk {I} {Γ} `dt _ desc) = cxType Γ $ cxType I $
                                         def₁ (quote HasDesc) (def `dt (ΓIVars 0 Γ I))
 
-
 module _ (`quotedDesc `hasDesc `dt : Name) where
   deriveHasDesc′ : QuotedDesc → TC ⊤
-  deriveHasDesc′ q =
-    do `q ← quoteTC q
-    -| define (vArg `quotedDesc) (quoteTerm QuotedDesc)
-              [ clause [] `q ]
-    ~| `desc := def₁ (quote QuotedDesc.desc) (def₀ `quotedDesc)
-    -| `to ← freshName "to"
-    -| `from ← freshName "from"
-    -| DeriveTo.deriveTo `to `desc q
-    ~| DeriveFrom.deriveFrom `from `desc q
-    ~| define (iArg `hasDesc) (hasDescType q)
+  deriveHasDesc′ q = do
+    `q ← quoteTC q
+    define (vArg `quotedDesc) (quoteTerm QuotedDesc) [ clause [] `q ]
+    let `desc = def₁ (quote QuotedDesc.desc) (def₀ `quotedDesc)
+    `to ← freshName "to"
+    `from ← freshName "from"
+    DeriveTo.deriveTo `to `desc q
+    DeriveFrom.deriveFrom `from `desc q
+    define (iArg `hasDesc) (hasDescType q)
               [ clause [] (con₃ (quote HasDesc.mk) `desc (def₀ `to) (def₀ `from)) ]
 
   deriveHasDesc : TC ⊤

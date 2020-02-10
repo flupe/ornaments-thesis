@@ -1,20 +1,22 @@
-
 module Cx.Cx.Reflection where
 
-open import Common
-open import Reflection
+open import Common hiding (abs)
+open import Reflect
 open import Stuff using (zipNats)
 open import Cx.Cx.Core
 
 `ε : Term
 `ε = con₀ (quote ε)
+
 _`▷_ : Term → Term → Term
 t `▷ s = con₂ (quote _▷_) t s
+
 _`▷₁_ : Term → Term → Term
 t `▷₁ s = con₂ (quote _▷₁_) t s
 
 `pop : Term → Term
 `pop = def₁ (quote pop)
+
 `top : Term → Term
 `top = def₁ (quote top)
 
@@ -74,39 +76,45 @@ private
   termListToCx = foldl (λ x y → x >>= flip helper y) (return ε)
     where
     helper : Cx → Term → TC Cx
-    helper tm x = quoteTC tm >>=′ λ `tm →
+    helper tm x = withNormalisation true (quoteTC tm) >>=′ λ `tm →
                   catchTC (unquoteTC (`tm `▷ x)) $
                   catchTC (unquoteTC (`tm `▷₁ x)) $
                   typeError (strErr "The context" ∷ termErr `tm ∷
                              strErr "can not be extended with the term" ∷ termErr x ∷
                              strErr ".\nInvalid parameters or indices?" ∷ [])
 
-typeToCx : ∀{a} (skip : Nat)(limit : Maybe Nat) → Type → TC (Cx {a})
+typeToCx : ∀ {a} (skip : Nat) (limit : Maybe Nat) → Type → TC (Cx {a})
 typeToCx skip limit = termListToCx ∘ termsInCxs ∘
                       (maybe id take limit) ∘ drop skip ∘ fst ∘ telView
 
 private
   macro
-    typeToCxᵐ : {a : Level}(skip : Nat)(limit : Maybe Nat) → Type → Tactic
-    typeToCxᵐ {a} skip limit ty = evalTC (typeToCx {a} skip limit ty)
+    typeToCxᵐ : ∀ {a} (skip : Nat) (limit : Maybe Nat) → Type → Tactic
+    typeToCxᵐ {a} skip limit ty hole = do
+      ty′ ← normalise ty
+      evalTC (typeToCx {a} skip limit ty′) hole
+    
     typeToCxFailsᵐ : {a : Level}(skip : Nat)(limit : Maybe Nat) → Type → Tactic
-    typeToCxFailsᵐ {a} skip limit ty = evalTC (ShouldFail (typeToCx {a} skip limit ty))
+    typeToCxFailsᵐ {a} skip limit ty hole = do
+      ty′ ← normalise ty
+      evalTC (ShouldFail (typeToCx {a} skip limit ty′)) hole
+  
   testty : Set₁
   testty = (A : Set) → (B : A → Set) → (n : Nat) → Vec A n → Set
-  test-typeToCx-1 : typeToCxᵐ 0 (just 2) testty ≡
-    (ε ▷₁ (λ γ → Set) ▷₁ (λ γ → top γ → Set))
+  
+  test-typeToCx-1 : typeToCxᵐ 0 (just 2) testty ≡ (ε ▷₁ (λ γ → Set) ▷₁ (λ γ → top γ → Set))
   test-typeToCx-1 = refl
+  
   test-typeToCx-2 : typeToCxᵐ 0 nothing testty ≡
-    (ε ▷₁ (λ γ → Set) ▷₁ (λ γ → top γ → Set) ▷ (λ γ → Nat)
-       ▷ (λ γ → Vec (top (pop (pop γ))) (top γ)))
+    (ε ▷₁ (λ γ → Set) ▷₁ (λ γ → top γ → Set) ▷ (λ γ → Nat) ▷ (λ γ → Vec (top (pop (pop γ))) (top γ)))
   test-typeToCx-2 = refl
-  test-typeToCx-3 : typeToCxᵐ {lzero} 2 (just 1) testty ≡
-    (ε ▷′ Nat)
+  
+  test-typeToCx-3 : typeToCxᵐ {lzero} 2 (just 1) testty ≡ (ε ▷′ Nat)
   test-typeToCx-3 = refl
-  test-typeToCx-4 : typeToCxᵐ {lsuc lzero} 2 (just 1) testty ≡
-    (ε ▷′ Nat)
+  
+  test-typeToCx-4 : typeToCxᵐ {lsuc lzero} 2 (just 1) testty ≡ (ε ▷′ Nat)
   test-typeToCx-4 = refl
-
+  
   test-typeToCx-5 : typeToCxFailsᵐ {lsuc lzero} 2 nothing testty
   test-typeToCx-5 = tt
 
@@ -124,22 +132,22 @@ private
 
 mutual
   cxToTel : ∀{a} → Cx {a} → TC Telescope
-  cxToTel (Γ ▷₁ S) = quoteTC S >>= cxToTel-helper Γ
-  cxToTel (Γ ▷ S) = quoteTC S >>= cxToTel-helper Γ
+  cxToTel (Γ ▷₁ S) = withNormalisation true (quoteTC S) >>= cxToTel-helper Γ
+  cxToTel (Γ ▷ S)  = withNormalisation true (quoteTC S) >>= cxToTel-helper Γ
   cxToTel ε = return []
 
   cxToTel-helper : ∀{a} → Cx {a} → Term → TC Telescope
-  cxToTel-helper {a} Γ `S =
-    do xs ← cxToTel {a} Γ
-    =| `tm ← applyCx Γ (cxVal 0 Γ) `S
-    -| return (xs ++ [ vArg `tm ])
+  cxToTel-helper {a} Γ `S = do
+    xs ← cxToTel {a} Γ
+    `tm ← applyCx Γ (cxVal 0 Γ) `S
+    return (xs ++ [ vArg `tm ])
 
 cxToType : ∀{a} → Type → Cx {a} → TC Type
 cxToType {a} ty Γ = flip telPi ty <$> cxToTel {a} Γ
 
 private
   Set→Cx→Set : ∀{a} → Set a → TC (Set a)
-  Set→Cx→Set {a} x = ((quoteTC x >>=′ typeToCx {a} 0 nothing) >>=′ cxToType set₀) >>=′ unquoteTC
+  Set→Cx→Set {a} x = ((withNormalisation true (quoteTC x) >>=′ typeToCx {a} 0 nothing) >>=′ cxToType set₀) >>=′ unquoteTC
 
   test-Set₁→Cx→Set₁ : evalT (Set→Cx→Set testty) ≡ testty
   test-Set₁→Cx→Set₁ = refl

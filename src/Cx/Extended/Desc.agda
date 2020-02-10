@@ -1,4 +1,3 @@
-
 module Cx.Extended.Desc where
 
 open import Common
@@ -6,10 +5,12 @@ open import Cx.Cx public
 
 infixr 2 _⊕_
 infixr 3 _⊗_ rec_⊗_
+
 data ConDesc (I : Cx₀)(Γ : Cx₁) : Set₁ where
   ι : (o : (γ : ⟦ Γ ⟧) → ⟦ I ⟧) → ConDesc I Γ
   _⊗_ : (S : (γ : ⟦ Γ ⟧) → Set) → (xs : ConDesc I (Γ ▷ S)) → ConDesc I Γ
   rec_⊗_ : (i : (γ : ⟦ Γ ⟧) → ⟦ I ⟧) → (xs : ConDesc I Γ) → ConDesc I Γ
+
 data DatDesc (I : Cx)(Γ : Cx) : (#c : Nat) → Set₁ where
   `0 : DatDesc I Γ 0
   _⊕_ : ∀{#c}(x : ConDesc I Γ)(xs : DatDesc I Γ #c) →
@@ -53,12 +54,20 @@ data μ {I Γ #c} (D : DatDesc I Γ #c) (γ : ⟦ Γ ⟧) (o : ⟦ I ⟧) : Set 
 ----------------------------------------
 -- Map
 
+conmap : ∀{I Γ X Y} (f : X →ⁱ Y) (D : ConDesc I Γ) →
+         {γ : ⟦ Γ ⟧} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
+conmap f (ι o) p = p
+conmap f (S ⊗ xs) (s , v) = s , conmap f xs v
+conmap f (rec i ⊗ xs) (s , v) = f s , conmap f xs v
+
+datmap : ∀{I Γ #c X Y} (f : X →ⁱ Y) (D : DatDesc I Γ #c) →
+          {γ : ⟦ Γ ⟧} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
+datmap f xs (k , v) = k , conmap f (lookupCtor xs k) v
+
 descmap : ∀{I Γ dt X Y} (f : X →ⁱ Y) (D : Desc I Γ dt) →
-  ∀{γ} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
-descmap {dt = isCon} f (ι o) p = p
-descmap {dt = isCon} f (S ⊗ xs) (s , v) = s , descmap f xs v
-descmap {dt = isCon} f (rec i ⊗ xs) (s , v) = f s , descmap f xs v
-descmap {dt = isDat _} f xs (k , v) = k , descmap f (lookupCtor xs k) v
+          {γ : ⟦ Γ ⟧} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
+descmap {dt = isCon  } = conmap
+descmap {dt = isDat _} = datmap
 
 
 ----------------------------------------
@@ -76,12 +85,15 @@ Alg {I} D γ X = ⟦ D ⟧ γ X →ⁱ X
 module Fold {I Γ #c}{D : DatDesc I Γ #c}{γ X} (α : Alg D γ X) where
   mutual
     fold : μ D γ →ⁱ X
-    fold ⟨ xs ⟩ = α (descmap-fold D xs)
+    fold ⟨ xs ⟩ = α (datmap-fold D xs)
 
-    -- The normal descmap specialised to fold. Needed for termination checking
-    descmap-fold : ∀{dt Γ′} (D′ : Desc I Γ′ dt) {γ′} → ⟦ D′ ⟧ γ′ (μ D γ) →ⁱ ⟦ D′ ⟧ γ′ X
-    descmap-fold {isCon} (ι o) refl = refl
-    descmap-fold {isCon} (S ⊗ xs) (s , v) = s , descmap-fold xs v
-    descmap-fold {isCon} (rec i′ ⊗ xs) (s , v) = fold s , descmap-fold xs v
-    descmap-fold {isDat _} xs (k , v) = k , descmap-fold (lookupCtor xs k) v
+    conmap-fold : ∀{Γ′} (D′ : ConDesc I Γ′)
+                  {γ′ : ⟦ Γ′ ⟧} → ⟦ D′ ⟧ γ′ (μ D γ) →ⁱ ⟦ D′ ⟧ γ′ X
+    conmap-fold (ι o) refl = refl
+    conmap-fold (S ⊗ xs) (s , v) = s , conmap-fold xs v
+    conmap-fold (rec i′ ⊗ xs) (s , v) = fold s , conmap-fold xs v
+
+    datmap-fold : ∀{Γ′ #c} (D′ : DatDesc I Γ′ #c)
+                   {γ′ : ⟦ Γ′ ⟧} → ⟦ D′ ⟧ γ′ (μ D γ) →ⁱ ⟦ D′ ⟧ γ′ X
+    datmap-fold xs (k , v) = k , conmap-fold (lookupCtor xs k) v
 open Fold using (fold) public

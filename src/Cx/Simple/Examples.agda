@@ -1,7 +1,7 @@
-
 module Cx.Simple.Examples where
 
 open import Common
+open import Cx.Simple.Desc
 open import Cx.Simple.Ornament
 
 natD : DatDesc 2
@@ -11,7 +11,6 @@ natD-zero = ⟨ 0 , tt ⟩
 natD-suc : μ natD → μ natD
 natD-suc n = ⟨ 1 , n , tt ⟩
 
-
 listD : (A : Set) → DatDesc 2
 listD A = ι ⊕ ((λ γ → A) ⊗ rec-⊗ ι) ⊕ `0
 listD-nil : ∀{A} → μ (listD A)
@@ -19,11 +18,9 @@ listD-nil = ⟨ 0 , tt ⟩
 listD-cons : ∀{A} → A → μ (listD A) → μ (listD A)
 listD-cons x xs = ⟨ 1 , x , xs , tt ⟩
 
-
 module NatToList where
   nat→slist : DatOrn natD
-  -- nat→list A = ? ⊕ ? ⊕ `0
-  nat→slist = ι ⊕ (insert (λ δ → String) ⊗ rec-⊗ ι) ⊕ `0
+  nat→slist = ι ⊕ ((λ δ → String) +⊗ rec-⊗ ι) ⊕ `0
 
   test-nat→slist : ornToDesc nat→slist ≡ listD String
   test-nat→slist = refl

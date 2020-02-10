@@ -2,7 +2,7 @@
 module Cx.HasDesc.Core where
 
 open import Common
-open import Reflection
+open import Reflect
 
 open import Cx.Named
 

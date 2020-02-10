@@ -70,24 +70,24 @@ vecDesc = ι (λ γ → (tt , 0))
 --   open import Cx.Extended
   
 
--- open import Cx.HasDesc
--- open import Cx.GenericOperations
--- open import Cx.Unquoting
+open import Cx.HasDesc
+open import Cx.GenericOperations
+open import Cx.Unquoting
 
--- ----------------------------------------
--- -- HTML fragments
+----------------------------------------
+-- HTML fragments
 
--- data Html : Set where
---   text : (text : String) → Html
---   conc : Html → Html → Html
---   div : Html → Html
---   p : Html → Html
+data Html : Set where
+  text : (text : String) → Html
+  conc : Html → Html → Html
+  div : Html → Html
+  p : Html → Html
 
--- unquoteDecl quotedHtml HtmlHasDesc =
---   deriveHasDesc quotedHtml HtmlHasDesc (quote Html)
+unquoteDecl quotedHtml HtmlHasDesc =
+  deriveHasDesc quotedHtml HtmlHasDesc (quote Html)
 
--- htmlDesc : DatDesc ε ε _
--- htmlDesc = QuotedDesc.desc quotedHtml
+htmlDesc : DatDesc ε ε _
+htmlDesc = QuotedDesc.desc quotedHtml
 
 -- --------------------
 

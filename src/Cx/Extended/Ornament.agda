@@ -1,4 +1,3 @@
-
 module Cx.Extended.Ornament where
 
 open import Common
@@ -6,11 +5,11 @@ open import Cx.Extended.Desc
 
 infixr 2 _⊕_
 infixr 3 -⊗_ rec_⊗_ _+⊗_ rec_+⊗_
-data Orn {I} J (u : Cxf J I)
-  {Γ} Δ (c : Cxf Δ Γ) : ∀{dt}(D : Desc I Γ dt) → Set₁ where
-  ι : ∀{i} → (j : (δ : ⟦ Δ ⟧) → u ⁻¹ (i (c δ))) → Orn _ u _ c (ι i)
-  -⊗_ : ∀{S xs} → (xs⁺ : Orn _ u _ (cxf-both c) xs) → Orn _ u _ c (S ⊗ xs)
-  rec_⊗_ : ∀{i xs} → (j : (δ : ⟦ Δ ⟧) → u ⁻¹ (i (c δ))) →
+
+data Orn {I} J (u : Cxf J I) {Γ} Δ (c : Cxf Δ Γ) : ∀ {dt} (D : Desc I Γ dt) → Set₁ where
+  ι      : ∀ {i} → (j : (δ : ⟦ Δ ⟧) → u ⁻¹ (i (c δ))) → Orn _ u _ c (ι i)
+  -⊗_    : ∀ {S xs} → (xs⁺ : Orn _ u _ (cxf-both c) xs) → Orn _ u _ c (S ⊗ xs)
+  rec_⊗_ : ∀ {i xs} → (j : (δ : ⟦ Δ ⟧) → u ⁻¹ (i (c δ))) →
     (xs⁺ : Orn _ u _ c xs) → Orn _ u _ c (rec i ⊗ xs)
 
   _+⊗_ : ∀{xs : ConDesc I Γ} → (S : (δ : ⟦ Δ ⟧) → Set) →
@@ -46,7 +45,7 @@ module _ {I J u} where
 
 module _ {I J u} where
   forgetNT : ∀{Γ Δ c dt}{D : Desc I Γ dt} (o : Orn J u Δ c D) →
-             ∀{δ X j} → ⟦ ornToDesc o ⟧ δ (X ∘ u) j → ⟦ D ⟧ (c δ) X (u j)
+             {δ : ⟦ Δ ⟧} → ∀ {X : ⟦ I ⟧ → Set} → {j : ⟦ J ⟧} → ⟦ ornToDesc o ⟧ δ (X ∘ u) j → ⟦ D ⟧ (c δ) X (u j)
   forgetNT (ι j) {δ} refl rewrite inv-eq (j δ) = refl
   forgetNT (-⊗ xs⁺) (s , v) = s , forgetNT xs⁺ v
   forgetNT (rec j ⊗ xs⁺) {δ} {X} (s , v) rewrite inv-eq (j δ) = s , forgetNT xs⁺ v

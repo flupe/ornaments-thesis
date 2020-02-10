@@ -44,7 +44,7 @@ data μ {#c : Nat}(F : DatDesc #c) : Set where
 -- Map
 
 conDescmap : ∀{Γ X Y} (f : X → Y) (D : ConDesc Γ) →
-             ∀{γ} → (v : ⟦ D ⟧ γ X) → ⟦ D ⟧ γ Y
+             {γ : ⟦ Γ ⟧} → (v : ⟦ D ⟧ γ X) → ⟦ D ⟧ γ Y
 conDescmap f ι tt = tt
 conDescmap f (S ⊗ xs) (s , v) = s , conDescmap f xs v
 conDescmap f (rec-⊗ xs) (s , v) = f s , conDescmap f xs v
@@ -68,10 +68,11 @@ module Fold {#c}{D : DatDesc #c}{X} (α : Alg D X) where
     -- Map the fold. It recurses on the description and needs local contexts
     -- to do the mapping. But when the fold is called all this can be
     -- forgotten.
-    conDescmap-fold : ∀{Γ′} (D′ : ConDesc Γ′) {γ′} → ⟦ D′ ⟧ γ′ (μ D) → ⟦ D′ ⟧ γ′ X
+    conDescmap-fold : ∀{Γ′} (D′ : ConDesc Γ′) {γ′ : ⟦ Γ′ ⟧} → ⟦ D′ ⟧ γ′ (μ D) → ⟦ D′ ⟧ γ′ X
     conDescmap-fold ι tt = tt
     conDescmap-fold (S ⊗ xs) (s , v) = s , conDescmap-fold xs v
     conDescmap-fold (rec-⊗ xs) (s , v) = fold s , conDescmap-fold xs v
     datDescmap-fold : ∀{#c} (D′ : DatDesc #c) (xs : ⟦ D′ ⟧ (μ D)) → ⟦ D′ ⟧ X
     datDescmap-fold xs (k , v) = k , conDescmap-fold (lookupCtor xs k) v
+
 open Fold using (fold) public

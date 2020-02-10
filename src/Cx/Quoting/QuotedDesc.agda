@@ -1,8 +1,7 @@
-
 module Cx.Quoting.QuotedDesc where
 
 open import Common
-open import Reflection
+open import Reflect
 
 open import Cx.Named
 

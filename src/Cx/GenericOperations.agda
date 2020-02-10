@@ -1,4 +1,3 @@
-
 module Cx.GenericOperations where
 
 open import Common

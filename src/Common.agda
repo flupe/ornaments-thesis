@@ -78,20 +78,21 @@ record Iso {ℓ : Level}(A B : Set ℓ) : Set ℓ where
     to-from : ∀ x → to (from x) ≡ x
     from-to : ∀ x → from (to x) ≡ x
 
-record Semantics {α β : Level}(A : Set α) : Set (α ⊔ lsuc β) where
+record Semantics {α β : Level} (A : Set α) : Set (α ⊔ lsuc β) where
   field
     {⟦⟧-Type} : Set β
     ⟦_⟧ : A → ⟦⟧-Type
+
 open Semantics {{...}} public
 
 _→ⁱ_ : {I : Set} → (I → Set) → (I → Set) → Set
-X →ⁱ Y = ∀{i} → X i → Y i
+X →ⁱ Y = ∀ {i} → X i → Y i
 
 
 ------------------------------
 -- Inverses
 
-module _ {a b}{A : Set a}{B : Set b} where
+module _ {a b} {A : Set a} {B : Set b} where
   -- |f ⁻¹ y| contains an |x| such that |f x ≡ y|
   data _⁻¹_ (f : A → B) : (y : B) → Set (a ⊔ b) where
     inv : (x : A) → f ⁻¹ (f x)

@@ -2,7 +2,7 @@
 module Cx.Examples.Vec where
 
 open import Common
-open import Reflection
+open import Reflect
 open import Cx.HasDesc
 open import Cx.Quoting
 

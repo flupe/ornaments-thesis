@@ -36,6 +36,7 @@ conOrnToDesc (rec-⊗ xs⁺) = rec-⊗ conOrnToDesc xs⁺
 conOrnToDesc (S +⊗ xs⁺) = S ⊗ conOrnToDesc xs⁺
 conOrnToDesc (rec-+⊗ xs⁺) = rec-⊗ conOrnToDesc xs⁺
 conOrnToDesc (give-K s xs⁺) = conOrnToDesc xs⁺
+
 ornToDesc : ∀{#c}{D : DatDesc #c} → DatOrn D → DatDesc #c
 ornToDesc `0 = `0
 ornToDesc (x⁺ ⊕ xs⁺) = conOrnToDesc x⁺ ⊕ ornToDesc xs⁺
@@ -46,15 +47,16 @@ ornToDesc (x⁺ ⊕ xs⁺) = conOrnToDesc x⁺ ⊕ ornToDesc xs⁺
 
 conForgetNT : ∀{Γ Δ}{c : Cxf Δ Γ}{D : ConDesc Γ} →
               (o : ConOrn c D) →
-              ∀{δ X} → ⟦ conOrnToDesc o ⟧ δ X → ⟦ D ⟧ (c δ) X
+              {δ : ⟦ Δ ⟧} → {X : Set} → ⟦ conOrnToDesc o ⟧ δ X → ⟦ D ⟧ (c δ) X
 conForgetNT ι tt = tt
 conForgetNT (-⊗ xs⁺) (s , v) = s , conForgetNT xs⁺ v
 conForgetNT (rec-⊗ xs⁺) (s , v) = s , conForgetNT xs⁺ v
 conForgetNT (_+⊗_ S xs⁺) (s , v) = conForgetNT xs⁺ v
 conForgetNT (rec-+⊗_ xs⁺) (s , v) = conForgetNT xs⁺ v
 conForgetNT (give-K s xs⁺) v = s _ , conForgetNT xs⁺ v
+
 forgetNT : ∀{#c}{D : DatDesc #c} (o : DatOrn D) →
-           ∀{X} → ⟦ ornToDesc o ⟧ X → ⟦ D ⟧ X
+           {X : Set} → ⟦ ornToDesc o ⟧ X → ⟦ D ⟧ X
 forgetNT `0 (() , _)
 forgetNT (x⁺ ⊕ xs⁺) (zero , v) = 0 , conForgetNT x⁺ v
 forgetNT (x⁺ ⊕ xs⁺) (suc k , v) = (suc *** id) (forgetNT xs⁺ (k , v))

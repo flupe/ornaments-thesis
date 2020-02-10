@@ -1,11 +1,10 @@
-
 module Cx.Quoting.Constructor where
 
 open import Container.Traversable
 open import Tactic.Reflection
 
-open import Common
-open import Reflection
+open import Common hiding (fromMaybe; abs)
+open import Reflect
 open import Cx.Named
 open import Cx.Cx.Reflection
 
@@ -22,7 +21,7 @@ module _ (`dt : Name) (#p : Nat) (I : Cx₀) where
 
   parseTarget : (offset : Nat) (Γ : Cx) → Term → TC (⟦ Γ ⟧ → ⟦ I ⟧)
   parseTarget o Γ (def `f args) with `f == `dt
-  parseTarget o Γ (def _ args) | yes _ = indicesInCx o Γ args
+  parseTarget o Γ (def _ args)  | yes _ = indicesInCx o Γ args
   parseTarget o Γ (def `f args) | no _ = typeError $
     strErr "parseTarget: Invalid constructor target" ∷ termErr (def `f args) ∷ []
   parseTarget o Γ tm = typeError $
@@ -33,11 +32,11 @@ module _ (`dt : Name) (#p : Nat) (I : Cx₀) where
     shape-⊗ : ∀ s tm → ShapeView (abs s (vArg tm))
     shape-fail : ∀ s i tm → String → ShapeView (abs s (arg i tm))
 
-  shapeViewV : ∀{s} → (tm : Term) → ShapeView (abs s (vArg tm))
+  shapeViewV : ∀ {s} → (tm : Term) → ShapeView (abs s (vArg tm))
   shapeViewV tm with absTelView tm
   shapeViewV _ | ttel  , def `f args , refl with `f == `dt
   shapeViewV _ | []    , def `f args , refl | yes p rewrite p = shape-rec _ _
-  shapeViewV _ | _ ∷ _ , def `f args , refl | yes p = shape-fail _ _ _ "Π-types in the argumentsare not supported"
+  shapeViewV _ | _ ∷ _ , def `f args , refl | yes p = shape-fail _ _ _ "Π-types in the arguments are not supported"
   shapeViewV _ | ttel  , def `f args , refl | no ¬p = shape-⊗ _ _
   shapeViewV _ | ttel  , ttarget , refl = shape-⊗ _ _
 
@@ -46,8 +45,9 @@ module _ (`dt : Name) (#p : Nat) (I : Cx₀) where
   shapeView (abs s (arg i tm)) = shape-fail _ _ _ "Only visible relevant arguments are supported"
 
   telStrengthenFrom : Nat → List (Abs (Arg Term)) → Maybe (List (Abs (Arg Term)))
-  telStrengthenFrom from [] = just []
+  telStrengthenFrom from []       = just []
   telStrengthenFrom from (x ∷ xs) = _∷_ <$> strengthenFrom from 1 x <*> telStrengthenFrom (suc from) xs
+
   telStrengthen : List (Abs (Arg Term)) → Maybe (List (Abs (Arg Term)))
   telStrengthen = telStrengthenFrom 0
 
@@ -55,28 +55,31 @@ module _ (`dt : Name) (#p : Nat) (I : Cx₀) where
   parseConstructor : ∀ Γ (offset : Nat) (ctel : AbsTelescope) (ctarget : Type) → TC (ConDesc I Γ)
   parseConstructor Γ o [] ctarget = ι <$> parseTarget o Γ ctarget
   parseConstructor Γ o (tm ∷ ctel) ctarget with shapeView tm
-  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-rec s args =
-    do is ← indicesInCx o Γ args
-    =| stel ← fromMaybe "Can't strengthen telescope" (telStrengthen ctel)
-    =| starget ← fromMaybe "Can't strengthen target" (strengthenFrom (length ctel) 1 ctarget)
-    =| rest ← parseConstructor Γ o stel starget
-    =| return (s /rec is ⊗ rest)
-  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-⊗ s tm =
-    do tm′ ← tryUnquoteTC "termInCx" (termInCx o tm)
-    =| rest ← parseConstructor (Γ ▷ tm′) (suc o) ctel ctarget
-    =| return (s / tm′ ⊗ rest)
-  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-fail s (arg-info hidden relevant) tm msg =
-    typeError $ strErr "Failed to parse constructor argument {" ∷ strErr s ∷
-                strErr ":" ∷ termErr tm ∷ strErr "}." ∷ strErr msg ∷ []
-  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-fail s i tm msg =
-    typeError $ strErr "Failed to parse constructor argument (" ∷ strErr s ∷
-                strErr ":" ∷ termErr tm ∷ strErr ")." ∷ strErr msg ∷ []
+  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-rec s args = do
+    is ← indicesInCx o Γ args
+
+    -- NOTE(flupe): kinda ugly fix
+    bindTC (fromMaybe "Can't strengthen telescope" (telStrengthen ctel)) $ λ stel →
+      bindTC (fromMaybe "Can't strengthen target" (strengthenFrom (length ctel) 1 ctarget)) $ λ starget → do
+        rest ← parseConstructor Γ o stel starget
+        return (s /rec is ⊗ rest)
+
+  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-⊗ s tm = do
+    tm′  ← tryUnquoteTC "termInCx" (termInCx o tm)
+    rest ← parseConstructor (Γ ▷ tm′) (suc o) ctel ctarget
+    return (s / tm′ ⊗ rest)
+
+  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-fail s (arg-info hidden relevant) tm msg = 
+    typeError $ strErr "Failed to parse constructor argument {" ∷ strErr s
+              ∷ strErr ":" ∷ termErr tm ∷ strErr "}." ∷ strErr msg ∷ []
+
+  parseConstructor Γ o (_ ∷ ctel) ctarget | shape-fail s argument tm msg = 
+    typeError $ strErr "Failed to parse constructor argument (" ∷ strErr s
+              ∷ strErr ":" ∷ termErr tm ∷ strErr ")." ∷ strErr msg ∷ []
 
   quoteConstructor : (Γ : Cx) (`c : Name) → TC (ConDesc I Γ)
-  quoteConstructor Γ `c =
-    do cty ← getType `c
-    =| let tel×target = absTelescope cty in
-       parseConstructor Γ #p (drop #p (fst tel×target)) (snd tel×target)
+  quoteConstructor Γ `c = do
+    bindTC (absTelescope <$> getType `c) λ where (tel , target) →  parseConstructor Γ #p (drop #p tel) target
 
   macro
     quoteConstructorᵐ : (Γ : Cx) (`c : Name) → Tactic

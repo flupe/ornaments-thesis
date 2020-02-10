@@ -10,6 +10,7 @@ record _▶₁_ (A : Set₁) (B : A → Set₁) : Set₁ where
   field
     pop₁ : A
     top₁ : B pop₁
+
 open _▶₁_ public
 
 record _▶₀_ {a} (A : Set a) (B : A → Set) : Set a where
@@ -17,6 +18,7 @@ record _▶₀_ {a} (A : Set a) (B : A → Set) : Set a where
   field
     pop₀ : A
     top₀ : B pop₀
+
 open _▶₀_ public
 
 record Popable {a b} (_▶_ : (A : Set a) (B : A → Set b) → Set (a ⊔ b)) : Set (lsuc (a ⊔ b)) where
@@ -24,13 +26,16 @@ record Popable {a b} (_▶_ : (A : Set a) (B : A → Set b) → Set (a ⊔ b)) :
     pop : {A : Set a} {B : A → Set b} → A ▶ B → A
     top : {A : Set a} {B : A → Set b} → (v : A ▶ B) → B (pop v)
     _,ᵖ_ : {A : Set a} {B : A → Set b} → (x : A) → (y : B x) → A ▶ B
+
 open Popable {{...}} public
 
 instance
   Popable-▶₁ : Popable _▶₁_
   Popable-▶₁ = record { pop = pop₁ ; top = top₁ ; _,ᵖ_ = _,_ }
+
   Popable-▶₀ : ∀{a} → Popable {a} _▶₀_
   Popable-▶₀ = record { pop = pop₀ ; top = top₀ ; _,ᵖ_ = _,_ }
+
 {-# DISPLAY pop₁ = pop #-}
 {-# DISPLAY top₁ = top #-}
 {-# DISPLAY pop₀ = pop #-}
@@ -40,13 +45,14 @@ instance
 ----------------------------------------
 
 infixl 0 _▷_ _▷₁_
+
 mutual
   -- Terrible hack, still only works with two levels. The only levels
   -- which are sure to be contained in (lsuc a) for any a, are 0 and
   -- a.
   data Cx {a : Level} : Set (lsuc a) where
-    _▷₁_ : {{p : a ≡ lsuc lzero}}(Γ : Cx)(S : (γ : ⟦ Γ ⟧Cx) → Set a) → Cx {a}
-    _▷_ : (Γ : Cx)(S : (γ : ⟦ Γ ⟧Cx) → Set) → Cx {a}
+    _▷₁_ : {{p : a ≡ lsuc lzero}}(Γ : Cx {a})(S : (γ : ⟦ Γ ⟧Cx) → Set a) → Cx {a}
+    _▷_  : (Γ : Cx)(S : (γ : ⟦ Γ ⟧Cx) → Set) → Cx {a}
     ε : Cx
 
   ⟦_⟧Cx : ∀{a} → Cx {a} → Set a

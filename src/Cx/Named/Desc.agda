@@ -1,22 +1,23 @@
-
 module Cx.Named.Desc where
 
 open import Common
 open import Cx.Cx public
-open import Reflection
+open import Reflect
 
 infixr 2 _⊕_
 infixr 3 _/_⊗_ _/rec_⊗_
-data ConDesc (I : Cx₀)(Γ : Cx₁) : Set₁ where
-  ι : (o : (γ : ⟦ Γ ⟧) → ⟦ I ⟧) → ConDesc I Γ
-  _/_⊗_ : (nm : String) → (S : (γ : ⟦ Γ ⟧) → Set) →
-    (xs : ConDesc I (Γ ▷ S)) → ConDesc I Γ
-  _/rec_⊗_ : (nm : String) → (i : (γ : ⟦ Γ ⟧) → ⟦ I ⟧) →
-    (xs : ConDesc I Γ) → ConDesc I Γ
-data DatDesc (I : Cx)(Γ : Cx) : (#c : Nat) → Set₁ where
-  `0 : DatDesc I Γ 0
-  _⊕_ : ∀{#c} → (x : ConDesc I Γ) →
-    (xs : DatDesc I Γ #c) → DatDesc I Γ (suc #c)
+
+data ConDesc (I : Cx₀) (Γ : Cx₁) : Set₁ where
+  ι       : (o : (γ : ⟦ Γ ⟧) → ⟦ I ⟧) → ConDesc I Γ
+  _/_⊗_  : (nm : String) → (S : (γ : ⟦ Γ ⟧) → Set)
+         → (xs : ConDesc I (Γ ▷ S)) → ConDesc I Γ
+  _/rec_⊗_ : (nm : String) → (i : (γ : ⟦ Γ ⟧) → ⟦ I ⟧)
+           → (xs : ConDesc I Γ) → ConDesc I Γ
+
+data DatDesc (I : Cx) (Γ : Cx) : (#c : Nat) → Set₁ where
+  `0  : DatDesc I Γ 0
+  _⊕_ : ∀ {#c} → (x : ConDesc I Γ)
+      → (xs : DatDesc I Γ #c) → DatDesc I Γ (suc #c)
 
 
 ----------------------------------------
@@ -27,22 +28,24 @@ data DescTag : Set₂ where
   isDat : (#c : Nat) → DescTag
 
 Desc : (I : Cx) → (Γ : Cx) → DescTag → Set₁
-Desc I Γ (isCon) = ConDesc I Γ
+Desc I Γ (isCon   ) = ConDesc I Γ
 Desc I Γ (isDat #c) = DatDesc I Γ #c
 
-lookupCtor : ∀{I Γ #c}(D : DatDesc I Γ #c) → Fin #c → ConDesc I Γ
+lookupCtor : ∀ {I Γ #c}(D : DatDesc I Γ #c) → Fin #c → ConDesc I Γ
 lookupCtor `0 ()
 lookupCtor (x ⊕ _) zero = x
 lookupCtor (_ ⊕ xs) (suc k) = lookupCtor xs k
 
 private
-  ⟦_⟧conDesc : ∀{I Γ} → ConDesc I Γ → ⟦ Γ ⟧ → (⟦ I ⟧ → Set) → (⟦ I ⟧ → Set)
+  ⟦_⟧conDesc : ∀ {I Γ} → ConDesc I Γ → ⟦ Γ ⟧ → (⟦ I ⟧ → Set) → (⟦ I ⟧ → Set)
   ⟦ ι o ⟧conDesc γ X o′ = o γ ≡ o′
   ⟦ _ / S ⊗ xs ⟧conDesc γ X o = Σ (S γ) λ s → ⟦ xs ⟧conDesc (γ , s) X o
   ⟦ _ /rec i ⊗ xs ⟧conDesc γ X o = X (i γ) × ⟦ xs ⟧conDesc γ X o
-⟦_⟧desc : ∀{I Γ dt} → Desc I Γ dt → ⟦ Γ ⟧ → (⟦ I ⟧ → Set) → (⟦ I ⟧ → Set)
+
+⟦_⟧desc : ∀ {I Γ dt} → Desc I Γ dt → ⟦ Γ ⟧ → (⟦ I ⟧ → Set) → (⟦ I ⟧ → Set)
 ⟦_⟧desc {dt = isCon} = ⟦_⟧conDesc
-⟦_⟧desc {dt = isDat #c} D γ X o = Σ (Fin #c) λ k → ⟦ lookupCtor D k ⟧conDesc γ X o
+⟦_⟧desc {dt = isDat #c} D γ X o =
+  Σ (Fin #c) λ k → ⟦ lookupCtor D k ⟧conDesc γ X o
 
 instance desc-semantics : ∀{I Γ dt} → Semantics (Desc I Γ dt)
          desc-semantics = record { ⟦_⟧ = ⟦_⟧desc }
@@ -56,13 +59,16 @@ data μ {I Γ #c} (D : DatDesc I Γ #c) (γ : ⟦ Γ ⟧) (o : ⟦ I ⟧) : Set 
 ----------------------------------------
 -- Map
 
-descmap : ∀{I Γ dt X Y} (f : X →ⁱ Y) (D : Desc I Γ dt) →
-          ∀{γ} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
-descmap {dt = isCon} f (ι o) refl = refl
-descmap {dt = isCon} f (_ / S ⊗ xs) (s , v) = s , descmap f xs v
-descmap {dt = isCon} f (_ /rec i ⊗ xs) (s , v) = f s , descmap f xs v
-descmap {dt = isDat _} f xs (k , v) = k , descmap f (lookupCtor xs k) v
+conmap : ∀{I Γ X Y} (f : X →ⁱ Y) (D : ConDesc I Γ) →
+         ∀{γ : ⟦ Γ ⟧} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
+conmap f (ι o) refl               = refl
+conmap f (_ / S ⊗ xs)    (s , v) = s , conmap f xs v
+conmap f (_ /rec i ⊗ xs) (s , v) = f s , conmap f xs v
 
+descmap : ∀{I Γ dt X Y} (f : X →ⁱ Y) (D : Desc I Γ dt) →
+          ∀{γ : ⟦ Γ ⟧} → ⟦ D ⟧ γ X →ⁱ ⟦ D ⟧ γ Y
+descmap {dt = isCon} = conmap
+descmap {dt = isDat _} f xs (k , v) = k , conmap f (lookupCtor xs k) v
 
 ----------------------------------------
 -- Folding
@@ -82,11 +88,13 @@ module Fold {I Γ #c}{D : DatDesc I Γ #c}{γ X} (α : Alg D γ X) where
     fold ⟨ xs ⟩ = α (descmap-fold D xs)
 
     -- The normal descmap specialised to fold. Needed for termination checking
-    descmap-fold : ∀{dt Γ′} (D′ : Desc I Γ′ dt) {γ′} → ⟦ D′ ⟧ γ′ (μ D γ) →ⁱ ⟦ D′ ⟧ γ′ X
+    {-# TERMINATING #-}
+    descmap-fold : ∀{dt Γ′} (D′ : Desc I Γ′ dt) {γ′ : ⟦ Γ′ ⟧} → ⟦ D′ ⟧ γ′ (μ D γ) →ⁱ ⟦ D′ ⟧ γ′ X
     descmap-fold {isCon} (ι o) refl = refl
     descmap-fold {isCon} (_ / S ⊗ xs) (s , v) = s , descmap-fold xs v
     descmap-fold {isCon} (_ /rec i′ ⊗ xs) (s , v) = fold s , descmap-fold xs v
     descmap-fold {isDat _} xs (k , v) = k , descmap-fold (lookupCtor xs k) v
+
 open Fold using (fold) public
 
 

@@ -1,4 +1,3 @@
-
 module Cx.Named.Ornament where
 
 open import Common
@@ -6,6 +5,7 @@ open import Cx.Named.Desc public
 
 infixr 2 _⊕_
 infixr 3 _/-⊗_ _/rec_⊗_ _/_+⊗_ _/rec_+⊗_
+
 data Orn {I} J (u : Cxf J I)
   {Γ} Δ (c : Cxf Δ Γ) : ∀{dt}(D : Desc I Γ dt) → Set₁ where
   ι : ∀{i} → (j : (δ : ⟦ Δ ⟧) → u ⁻¹ (i (c δ))) → Orn _ u _ c (ι i)
@@ -46,8 +46,8 @@ module _ {I J u} where
 -- Ornamental algebra
 
 module _ {I J u} where
-  forgetNT : ∀{Γ Δ c dt}{D : Desc I Γ dt} (o : Orn J u Δ c D) →
-             ∀{δ X j} → ⟦ ornToDesc o ⟧ δ (X ∘ u) j → ⟦ D ⟧ (c δ) X (u j)
+  forgetNT : ∀ {Γ Δ c dt} {D : Desc I Γ dt} (o : Orn J u Δ c D)
+           → {δ : ⟦ Δ ⟧} → ∀ {X : ⟦ I ⟧ → Set} → {j : ⟦ J ⟧} → ⟦ ornToDesc o ⟧ δ (X ∘ u) j → ⟦ D ⟧ (c δ) X (u j)
   forgetNT {c = c} (ι j) {δ} refl = sym (inv-eq (j δ))
   forgetNT (_/-⊗_ _ xs⁺) (s , v) = s , forgetNT xs⁺ v
   forgetNT (_/rec_⊗_ _ j xs⁺) {δ} {X} (s , v) = transport X (inv-eq (j δ)) s , forgetNT xs⁺ v

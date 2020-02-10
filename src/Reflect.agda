@@ -1,6 +1,6 @@
-module Reflection where
+module Reflect where
 
-open import Common
+open import Common hiding (fromMaybe; abs)
 open import Builtin.Reflection public
 open import Tactic.Reflection public
 
@@ -75,18 +75,18 @@ showNameInModule = packString ∘ reverse ∘ beforeDot ∘ reverse ∘ unpackSt
 ----------------------------------------
 -- TC convenience functions
 
-fromMaybe′ : ∀{a}{A : Set a} → List ErrorPart → Maybe A → TC A
+fromMaybe′ : ∀ {a} {A : Set a} → List ErrorPart → Maybe A → TC A
 fromMaybe′ e (just x) = return x
 fromMaybe′ e nothing = typeError e
 
-fromMaybe : ∀{a}{A : Set a} → String → Maybe A → TC A
+fromMaybe : ∀ {a} {A : Set a} → String → Maybe A → TC A
 fromMaybe s = fromMaybe′ [ strErr s ]
 
-tryUnquoteTC : ∀{a}{A : Set a} → String → Term → TC A
-tryUnquoteTC {A = A} s tm = catchTC (unquoteTC tm) (quoteTC A >>=′ λ `A →
+tryUnquoteTC : ∀ {a} {A : Set a} → String → Term → TC A
+tryUnquoteTC {A = A} s tm = catchTC (withNormalisation true (unquoteTC tm)) (quoteTC A >>=′ λ `A →
   typeError (strErr s ∷ strErr "failed to unquote" ∷ termErr tm ∷ strErr "to type" ∷ termErr `A ∷ []))
 
-ShouldFail : ∀{a}{A : Set a} → TC A → TC Set
+ShouldFail : ∀ {a} {A : Set a} → TC A → TC Set
 ShouldFail tc = catchTC (tc >>=′ λ _ → return ⊥) (return ⊤)
 
 macro

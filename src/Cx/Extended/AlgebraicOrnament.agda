@@ -1,4 +1,3 @@
-
 module Cx.Extended.AlgebraicOrnament where
 
 open import Common
