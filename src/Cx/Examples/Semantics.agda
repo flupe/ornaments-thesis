@@ -3,8 +3,8 @@
 
 module Cx.Examples.Semantics where
 
-open import Common
-open import Reflection
+open import Common hiding (abs)
+open import Reflect
 open import Cx.HasDesc
 open import Cx.GenericOperations
 open import Cx.Unquoting
@@ -14,7 +14,7 @@ data Ty : Set where
   `Bool : Ty
 
 ⟦_⟧Ty : Ty → Set
-⟦ `Nat ⟧Ty = Nat
+⟦ `Nat ⟧Ty  = Nat
 ⟦ `Bool ⟧Ty = Bool
 
 data Exp : Ty → Set where
@@ -23,8 +23,8 @@ data Exp : Ty → Set where
   `+ : Exp `Nat → Exp `Nat → Exp `Nat
   `if : ∀ ty → Exp `Bool → Exp ty → Exp ty → Exp ty
 
-unquoteDecl quotedExp expHasDesc =
-  deriveHasDesc quotedExp expHasDesc (quote Exp)
+unquoteDecl quotedExp expHasDesc = deriveHasDesc quotedExp expHasDesc (quote Exp)
+
 expDesc : DatDesc (ε ▷′ Ty) ε 4
 expDesc = QuotedDesc.desc quotedExp
 
@@ -38,7 +38,7 @@ SemAlg (suc (suc (suc (suc ()))) , _)
 ⟦_⟧Exp : ∀{ty} → Exp ty → ⟦ ty ⟧Ty
 ⟦_⟧Exp tm = gfold SemAlg tm
 
-semExpOrn : Orn _ _ expDesc
+semExpOrn : Orn _ _ _ _ expDesc
 semExpOrn = algOrn SemAlg
 
 semExpDesc : DatDesc (ε ▷′ Ty ▷ (λ γ → ⟦ top γ ⟧Ty)) ε 4
@@ -47,11 +47,16 @@ semExpDesc = ornToDesc semExpOrn
 -- Unquoting datatypes is somewhat verbose right now:
 data SemExp : unquoteDat semExpDesc where
   `nat : unquoteCon semExpDesc 0 SemExp
-  `≤ : unquoteCon semExpDesc 1 SemExp
-  `+ : unquoteCon semExpDesc 2 SemExp
-  `if : unquoteCon semExpDesc 3 SemExp
+  `≤   : unquoteCon semExpDesc 1 SemExp
+  `+   : unquoteCon semExpDesc 2 SemExp
+  `if  : unquoteCon semExpDesc 3 SemExp
+
+{-
+
+-- this fails, for some reason
 unquoteDecl quotedSemExp semExpHasDesc =
   deriveHasDescExisting quotedSemExp semExpHasDesc (quote SemExp) semExpDesc
+
 -- Ideally, one would be able to define datatypes within TC:
 --   unquoteDecl quotedSemExp semExpHasDesc SemExp `nat `≤ `+ `if =
 --     unquoteDatatype semExpDesc quotedSemExp semExpHasDesc SemExp (`nat ∷ `≤ ∷ `+ ∷ `if)
@@ -84,3 +89,4 @@ optimise-0+′ = forgetSem ∘ optimise-0+ ∘ rememberSem
 optimise-0+-example : optimise-0+′ example-exp ≡ `nat 7
 optimise-0+-example = refl
 
+-}

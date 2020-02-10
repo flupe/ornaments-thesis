@@ -5,8 +5,7 @@ open import Cx.Named
 open import Cx.HasDesc
 open HasDesc
 
-gfold : ∀{A}{{R : HasDesc A}} → ∀{X} →
-  Alg (desc R) (γ R) X → A → X (i R)
+gfold : ∀{A} {{R : HasDesc A}} → ∀{X} → Alg (desc R) (γ R) X → A → X (i R)
 gfold α = fold α ∘ to
 
 gforget : ∀{A}{{AR : HasDesc A}}{B}{{BR : HasDesc B}} →
@@ -33,6 +32,7 @@ maxNat-id : ∀ n → maxNat n n ≡ n
 maxNat-id zero = refl
 maxNat-id (suc n) = cong suc (maxNat-id n)
 
+{-# TERMINATING #-}
 depthAlg : ∀{I Γ dt} → (D : Desc I Γ dt) → ∀{γ} → Alg D γ (λ i → Nat)
 depthAlg {dt = isCon} (ι o) v = 0
 depthAlg {dt = isCon} (nm / S ⊗ xs) (s , v) = depthAlg xs v
@@ -48,6 +48,7 @@ gdepth {{R}} = gfold (depthAlg (desc R))
 
 -- Count all the nodes, including the leaves
 
+{-# TERMINATING #-}
 countAlg : ∀{I Γ dt} → (D : Desc I Γ dt) → ∀{γ} → Alg D γ (λ i → Nat)
 countAlg {dt = isCon} (ι o) x = 1
 countAlg {dt = isCon} (nm / S ⊗ xs) (s , v) = countAlg xs v

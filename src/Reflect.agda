@@ -83,7 +83,7 @@ fromMaybe : ∀ {a} {A : Set a} → String → Maybe A → TC A
 fromMaybe s = fromMaybe′ [ strErr s ]
 
 tryUnquoteTC : ∀ {a} {A : Set a} → String → Term → TC A
-tryUnquoteTC {A = A} s tm = catchTC (withNormalisation true (unquoteTC tm)) (quoteTC A >>=′ λ `A →
+tryUnquoteTC {A = A} s tm = catchTC (withNormalisation true (unquoteTC tm)) (withNormalisation true (quoteTC A) >>=′ λ `A →
   typeError (strErr s ∷ strErr "failed to unquote" ∷ termErr tm ∷ strErr "to type" ∷ termErr `A ∷ []))
 
 ShouldFail : ∀ {a} {A : Set a} → TC A → TC Set

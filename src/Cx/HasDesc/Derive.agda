@@ -107,7 +107,8 @@ module _ (`quotedDesc `hasDesc `dt : Name) where
   deriveHasDesc′ : QuotedDesc → TC ⊤
   deriveHasDesc′ q = do
     `q ← quoteTC q
-    define (vArg `quotedDesc) (quoteTerm QuotedDesc) [ clause [] `q ]
+    t ← normalise (quoteTerm QuotedDesc)
+    define (vArg `quotedDesc) t [ clause [] `q ]
     let `desc = def₁ (quote QuotedDesc.desc) (def₀ `quotedDesc)
     `to ← freshName "to"
     `from ← freshName "from"

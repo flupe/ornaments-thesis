@@ -97,7 +97,6 @@ module Fold {I Γ #c}{D : DatDesc I Γ #c}{γ X} (α : Alg D γ X) where
 
 open Fold using (fold) public
 
-
 ----------------------------------------
 -- Walking over actual descriptions
 

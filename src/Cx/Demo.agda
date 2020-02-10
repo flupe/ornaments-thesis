@@ -1,4 +1,3 @@
-
 module Cx.Demo where
 
 open import Common
@@ -6,7 +5,6 @@ open import Common
 module S where
 
   open import Cx.Simple
-
 
   natD : DatDesc 2
   natD = ι ⊕ (rec-⊗ ι) ⊕ `0
@@ -32,14 +30,12 @@ module S where
   wrapFin = (λ γ → Nat) ⊗ (λ γ → Fin (top γ)) ⊗ ι ⊕ `0
 
 
-
   module NatToList where
     nat→slist : DatOrn natD
     nat→slist = ι ⊕ ((λ δ → String) +⊗ rec-⊗ ι) ⊕ `0
 
     test-nat→slist : ornToDesc nat→slist ≡ listD String
     test-nat→slist = refl
-
 
     -- Using an ornamental algebra
 
@@ -50,7 +46,6 @@ module S where
     forget-list : forget nat→slist ex-list ≡ natD-suc (natD-suc (natD-suc natD-zero))
     -- forget-list : forget nat→slist ex-list ≡ ⟨ 1 , ⟨ 1 , ⟨ 1 , ⟨ 0 , tt ⟩ , tt ⟩ , tt ⟩ , tt ⟩
     forget-list = refl
-
 
 
 module E where
@@ -66,7 +61,6 @@ module E where
 
   natD-suc : μ natD tt tt → μ natD tt tt
   natD-suc n = ⟨ 1 , n , refl ⟩
-
 
   listD : DatDesc ε (ε ▷₁′ Set) 2
   listD = ι (λ _ → tt)
@@ -123,7 +117,7 @@ module E where
     lengthAlg (suc (suc ()) , _)
 
     list→vec : Orn (ε ▷′ Nat) (λ _ → tt) (ε ▷₁′ Set) id listD
-    list→vec = algOrn lengthAlg
+    list→vec = algOrn listD lengthAlg
 
     vecD′ : DatDesc (ε ▷′ Nat) (ε ▷₁′ Set) 2
     vecD′ = ι (λ _ → (tt , 0))
@@ -165,7 +159,7 @@ module N where
   open import Cx.HasDesc
   open import Cx.Quoting
   open import Cx.GenericOperations
-  open import Reflection
+  open import Reflect
 
   module QuoteNat where
 
@@ -257,7 +251,7 @@ module N where
     open QuoteNat
     open QuoteList
 
-    nat→list : Orn _ _ natDesc
+    nat→list : Orn _ _ _ _ natDesc
     nat→list = renameArguments 1 (just "xs" ∷ [])
            >>⁺ addParameterArg 1 "x"
 
@@ -267,7 +261,7 @@ module N where
     test-nat→list : listDescByOrnament ≡ listDesc
     test-nat→list = refl
 
-    nat→list′ : DefOrn ε id (ε ▷₁′ Set) (λ _ → tt) natDesc
+    nat→list′ : Orn ε id (ε ▷₁′ Set) (λ _ → tt) natDesc
     nat→list′ = ι (λ _ → inv tt)
               ⊕ "x" / top +⊗ "xs" /rec (λ _ → inv tt) ⊗ (ι (λ _ → inv tt))
               ⊕ `0
@@ -284,7 +278,7 @@ module N where
   module NatToListByDepth where
     open QuoteList
 
-    list→vec : Orn _ _ listDesc
+    list→vec : Orn _ _ _ _ listDesc
     list→vec = algOrn (depthAlg listDesc)
 
     vecD′ : DatDesc (ε ▷′ Nat) (ε ▷₁′ Set) 2
@@ -297,8 +291,6 @@ module N where
 
     test-list→vec : ornToDesc list→vec ≡ vecD′
     test-list→vec = refl
-
-
 
   module QuoteVec where
     vecDesc : DatDesc (ε ▷′ Nat) (ε ▷₁′ Set) 2
@@ -329,7 +321,7 @@ module N where
 
 
   module MultiIndex where
-    -- Limitation: Indices can not depend on parameters
+    -- Limitation: Indices cannot depend on parameters
     data Multi : (n : Nat) → Fin n → Set where
       fo : (n : Nat) → (k : Fin n) → Multi n k
     data MultiP (A : Set) : (n : Nat) → Vec A n → Set where
@@ -338,6 +330,6 @@ module N where
     q : QuotedDesc
     q = evalT (quoteDatatype (quote Multi))
 
-    open import Reflection using (ShouldFailᵐ)
+    open import Reflect using (ShouldFailᵐ)
     qp : ShouldFailᵐ (quoteDatatype (quote MultiP))
     qp = tt

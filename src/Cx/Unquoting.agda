@@ -1,8 +1,7 @@
-
 module Cx.Unquoting where
 
-open import Reflection
-open import Common
+open import Reflect
+open import Common hiding (abs)
 open import Cx.Named
 open import Cx.Quoting.QuotedDesc
 
@@ -38,26 +37,28 @@ module ConDescType {I : Cx₀}{Γ : Cx₁} (`dt : Type) where
   -- p1 :: (p2 :: (p3 ..))
   -- ((`dt $ p1) $ p2) $ p3
   helper : ∀{Γ′} → (paramOffset : Nat) → (`γ : Term) → ConDesc I Γ′ → TC Type
-  helper {Γ′} paramOffset `γ (ι o) =
-    do `i ← quoteTC o >>= applyCx Γ′ `γ >>= forceTypeTC ⟦ I ⟧
-    -| return (selfRef (cxVars paramOffset Γ) `i)
-  helper {Γ′} paramOffset `γ (nm / S ⊗ xs) =
-    do `tm ← quoteTC S >>= applyCx Γ′ `γ
-    -| `rec ← helper (suc paramOffset)
+  helper {Γ′} paramOffset `γ (ι o) = do
+    `i ← withNormalisation true (quoteTC o) >>= applyCx Γ′ `γ >>= forceTypeTC ⟦ I ⟧
+    return (selfRef (cxVars paramOffset Γ) `i)
+
+  helper {Γ′} paramOffset `γ (nm / S ⊗ xs) = do
+    `tm ← withNormalisation true (quoteTC S) >>= applyCx Γ′ `γ
+    `rec ← helper (suc paramOffset)
                          (con₂ (quote _▶₀_._,_) (weaken 1 `γ) (var₀ 0))
                          xs
-    -| return (pi (vArg `tm) (abs nm `rec))
-  helper {Γ′} paramOffset `γ (nm /rec i ⊗ xs) =
-    do `i ← quoteTC i >>= applyCx Γ′ `γ >>= forceTypeTC ⟦ I ⟧
-    -| `rec ← helper (suc paramOffset) (weaken 1 `γ) xs
-    -| return (pi (vArg (selfRef (cxVars paramOffset Γ) `i)) (abs nm `rec))
+    return (pi (vArg `tm) (abs nm `rec))
+
+  helper {Γ′} paramOffset `γ (nm /rec i ⊗ xs) = do
+    `i ← withNormalisation true (quoteTC i) >>= applyCx Γ′ `γ >>= forceTypeTC ⟦ I ⟧
+    `rec ← helper (suc paramOffset) (weaken 1 `γ) xs
+    return (pi (vArg (selfRef (cxVars paramOffset Γ) `i)) (abs nm `rec))
 
   -- Does not include parameters in the type, but does assume that they are in
   -- the context. The resulting type uses free variables.
   conDescTypeBare : ConDesc I Γ → TC Type
-  conDescTypeBare D =
-    do `tel ← cxToTel Γ
-    -| inContext `tel (helper 0 (cxVal 0 Γ) D >>= normalise)
+  conDescTypeBare D = do
+    `tel ← cxToTel Γ
+    inContext `tel (helper 0 (cxVal 0 Γ) D >>= normalise)
 
   -- Type of constructor including parameters
   conDescType : ConDesc I Γ → TC Type

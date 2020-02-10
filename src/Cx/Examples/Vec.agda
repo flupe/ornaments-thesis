@@ -12,8 +12,10 @@ data MyVec (A : Set) : Nat → Set where
 
 pattern nil-α = nil
 pattern nil-β = ⟨ zero , refl ⟩
+
 pattern cons-α n x xs = cons n x xs
 pattern cons-β n x xs = ⟨ suc zero , n , x , xs , refl ⟩
+
 pattern absurd-β = ⟨ suc (suc ()) , _ ⟩
 
 module Manually where
@@ -43,7 +45,6 @@ module Auto where
 
   test-desc : QuotedDesc.desc quotedVec ≡ Manually.vdesc
   test-desc = refl
-
 
   test-to : ∀ {A n} → (xs : MyVec A n) → Manually.vto xs ≡ to xs
   test-to nil-α = refl
